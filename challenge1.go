@@ -14,9 +14,9 @@ import (
 	"strings"
 )
 
-const MY_KEY = "NhptfPnZUSLy7r98YO9DgEK"
+const myKey = "NhptfPnZUSLy7r98YO9DgEK"
 
-func getEncryptedMessage() (string, string){
+func getEncryptedMessage() (string, string) {
 	ctx := context.Background()
 	tokenService := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: "13611c6f81f36b7e29d1b33f42cfa878c8564206"},
@@ -76,21 +76,19 @@ func decrypt(data []byte, passphrase string) []byte {
 	return plaintext
 }
 
-
 func main() {
 	part1, part2 := getEncryptedMessage()
 	decryptedText := string(binToHexArr(part1))
 	i := strings.Index(decryptedText, "\"")
-	keySuffix := decryptedText[i+1:i+6]
-	println(MY_KEY + keySuffix)
+	keySuffix := decryptedText[i+1 : i+6]
+	println(myKey + keySuffix)
 
-	apiKey := decrypt(binToHexArr(part2), MY_KEY + keySuffix)
+	apiKey := decrypt(binToHexArr(part2), myKey+keySuffix)
 	fmt.Printf("Decrypted: %s\n", apiKey)
 
-
-	req, _ := http.NewRequest("PATCH", "https://welcome.cfapps.us10.hana.ondemand.com/api/activate?passcode=" + keySuffix, nil)
+	req, _ := http.NewRequest("PATCH", "https://welcome.cfapps.us10.hana.ondemand.com/api/activate?passcode="+keySuffix, nil)
 	req.Header.Set("Cookie", string(apiKey))
 	resp, _ := http.DefaultClient.Do(req)
 	defer resp.Body.Close()
-	fmt.Printf("%d",resp.StatusCode)
+	fmt.Printf("%d", resp.StatusCode)
 }
