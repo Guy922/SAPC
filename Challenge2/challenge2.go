@@ -10,7 +10,7 @@ import (
 
 const appKey = "app=MTYxMzExNjk5N3xEdi1CQkFFQ180SUFBUkFCRUFBQV9fSF9nZ0FDQm5OMGNtbHVad3dSQUE5emFXZHVYM1Z3WDJSbGRHRnBiSE1HYzNSeWFXNW5EUC1sQVAtaWV5SmxiV0ZwYkY5aFpHUnlaWE56SWpvaVozVjVPVEl5UUdkdFlXbHNMbU52YlNJc0ltWnBjbk4wWDI1aGJXVWlPaUpIZFhraUxDSnNZWE4wWDI1aGJXVWlPaUpFZFc1emEza2lMQ0p2WTJOMWNHRjBhVzl1SWpvaUlpd2lkR1ZzSWpvaUlpd2lkVzVwZG1WeWMybDBlU0k2SWlJc0luZHZjbXR3YkdGalpTSTZJaUlzSW05bVptVnlhVzVuY3lJNmRISjFaU3dpZEdWeWJYTWlPblJ5ZFdWOUJuTjBjbWx1Wnd3S0FBaDFjMlZ5Ym1GdFpRWnpkSEpwYm1jTUNBQUdSM1Y1T1RJeXywI4NfyRdkcEk6YyhBlU3tt4OFJ3yocjuf8MRqZ_urGA=="
 const baseURL = "https://welcome.cfapps.us10.hana.ondemand.com/node"
-const maxNodes = 40
+const maxNodes = 100
 
 var opts = map[string]string{
 	"offleft":  "?toggle=off&go=left",
@@ -63,6 +63,7 @@ func JsonToNode(NodeBytes []byte) Node {
 	}
 	return node
 }
+
 
 func main() {
 	var node Node

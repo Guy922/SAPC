@@ -1,3 +1,4 @@
+
 package main
 
 import (
@@ -7,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 )
 
@@ -15,7 +17,7 @@ const baseURL = "https://welcome.cfapps.us10.hana.ondemand.com/device"
 
 type Device struct {
 	DeviceType string `json:"device_type"`
-	Md5Id      string `json:"id"`
+	Id         string `json:"id"`
 	Seq        int    `json:"seq"`
 	State      string `json:"state"`
 }
@@ -37,6 +39,8 @@ type DeviceStatus struct {
 	Temperature int    `json:"temperature"`
 }
 
+
+// Make an HTTP request to the given URL with the given method. Return the request body.
 func DoRequest(method, URL string) []byte {
 	req, _ := http.NewRequest(method, URL, nil)
 	req.Header.Set("Accept", "application/json")
@@ -50,22 +54,31 @@ func DoRequest(method, URL string) []byte {
 	return bodyBytes
 }
 
-func GetPageNumber() int {
+// Call DoRequest Asynchronously
+func DoRequestAsync(method, URL string, c chan []byte){
+	c <- DoRequest(method, URL)
+}
+
+// Get the total number of pages
+func GetPagesNumber() int {
 	respBytes := DoRequest("GET", baseURL)
 	var deviceList DeviceList
 	json.Unmarshal(respBytes, &deviceList)
 	return deviceList.Pages
 }
 
+// Get an array of devices with status Online
 func GetOnlineDevices() []Device {
+	c := make(chan []byte)
 	var result []Device
-	pagesNum := GetPageNumber()
+	pagesNum := GetPagesNumber()
 	for i := 0; i <= pagesNum; i++ {
-		print(i)
-		print(" ")
-		respBytes := DoRequest("GET", baseURL+"?next="+strconv.Itoa(i))
+		println("Async req#" + strconv.Itoa(i) + " sent") // DEBUG
+		go DoRequestAsync("GET", baseURL+"?next="+strconv.Itoa(i), c)
+	}
+	for i := 0; i <= pagesNum; i++ {
 		var deviceList DeviceList
-		json.Unmarshal(respBytes, &deviceList)
+		json.Unmarshal(<-c, &deviceList)
 		for _, device := range deviceList.Items {
 			if device.State == "Online" {
 				result = append(result, device)
@@ -75,12 +88,28 @@ func GetOnlineDevices() []Device {
 	return result
 }
 
-func IsDeviceHot(deviceId string) bool {
-	respBytes := DoRequest("GET", baseURL+"/"+deviceId+"/status")
-	var deviceStatus DeviceStatus
-	json.Unmarshal(respBytes, &deviceStatus)
-	println(" Temp: " + strconv.Itoa(deviceStatus.Temperature))
-	return deviceStatus.Temperature > 29
+// Get an array of devices with temp <= 29
+func GetGoodDevices(devices []Device) []DeviceStatus {
+	c := make(chan []byte)
+
+	var goodDevices []DeviceStatus
+	for i, device := range devices {
+		println("#" + strconv.Itoa(i) +" Async temp req for device # " + device.Id)
+		go DoRequestAsync("GET", baseURL+"/"+device.Id+"/status", c)
+	}
+
+	for i := 0; i < len(devices); i++ {
+		var goodDevice DeviceStatus
+		json.Unmarshal(<-c, &goodDevice)
+		if goodDevice.Temperature <= 29 {
+			goodDevices = append(goodDevices, goodDevice)
+		}
+	}
+
+	sort.Slice(goodDevices[:], func(i, j int) bool {
+		return goodDevices[i].Seq < goodDevices[j].Seq
+	})
+	return goodDevices
 }
 
 func GetMD5Hash(text string) string {
@@ -88,17 +117,13 @@ func GetMD5Hash(text string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+
 func main() {
 	devices := GetOnlineDevices()
+	goodDevices := GetGoodDevices(devices)
 	goodDevicesStr := ""
-	for i, device := range devices {
-		print(i)
-		print("/")
-		print(len(devices))
-		if !IsDeviceHot(device.Md5Id) {
-			println(device.Md5Id)
-			goodDevicesStr += device.Md5Id
-		}
+	for _, device := range goodDevices {
+		goodDevicesStr += device.Id
 	}
 	println(GetMD5Hash(goodDevicesStr))
 }
